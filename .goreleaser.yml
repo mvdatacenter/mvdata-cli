@@ -1,0 +1,21 @@
+version: 2
+builds:
+  - binary: mvdata
+    ldflags:
+      - -s -w -X github.com/mvdatacenter/mvdata-cli/internal/cmd.version={{.Version}}
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
