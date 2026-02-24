@@ -2,6 +2,21 @@
 
 Command-line interface for managing MV Data cloud resources.
 
+## Goal
+
+This CLI provides 1:1 coverage of every resource in the MV Data console API. It is a thin wrapper around [mvdata-sdk-go](https://github.com/mvdatacenter/mvdata-sdk-go) using [cobra](https://github.com/spf13/cobra). Every resource the SDK exposes gets a corresponding CLI command. When the SDK adds a new resource, the CLI adds a matching command.
+
+### Coverage
+
+| Console API resource | CLI command | Operations |
+|---------------------|-------------|------------|
+| VPC | `mvdata vpc` | create, get, delete |
+| Subnet | `mvdata subnet` | create, get, delete |
+| Instance | `mvdata instance` | create, get, delete |
+| SSH Key | `mvdata key` | create, get, delete |
+| Kubernetes Cluster | `mvdata kubernetes` | create, get, update, delete |
+| Instance Type | `mvdata instance-types` | list |
+
 ## Installation
 
 ### From source
@@ -12,7 +27,7 @@ go install github.com/mvdatacenter/mvdata-cli@latest
 
 ### From release
 
-Download the latest binary from the [releases page](https://github.com/mvdatacenter/mvdata-cli/releases).
+Download the latest binary from the [releases page](https://github.com/mvdatacenter/mvdata-cli/releases). Builds are available for Linux, macOS, and Windows (amd64 + arm64).
 
 ## Authentication
 
@@ -74,6 +89,14 @@ cd mvdata-cli
 make build
 make test
 ```
+
+For local development against an unreleased SDK, add a replace directive:
+
+```
+go mod edit -replace github.com/mvdatacenter/mvdata-sdk-go=../mvdata-sdk-go
+```
+
+Remove it before committing — CI requires deps resolve from the module proxy.
 
 ## License
 
