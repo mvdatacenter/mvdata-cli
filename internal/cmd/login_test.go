@@ -38,10 +38,11 @@ func TestLogin(t *testing.T) {
 			} else {
 				// Second poll: complete
 				json.NewEncoder(w).Encode(sdk.DeviceTokenResponse{
-					Status:      "complete",
-					APIToken:    "mvd_test_token_1234567890",
-					AccountName: "comsol",
-					Email:       "alice@customer.com",
+					Status:        "complete",
+					APIToken:      "mvd_test_token_1234567890",
+					AccountName:   "comsol",
+					AccountNumber: "100000114",
+					Email:         "alice@customer.com",
 				})
 			}
 		default:
@@ -63,6 +64,9 @@ func TestLogin(t *testing.T) {
 	}
 	if !strings.Contains(out, "comsol") {
 		t.Errorf("expected account name in output, got: %s", out)
+	}
+	if !strings.Contains(out, "#100000114") {
+		t.Errorf("expected account number in output, got: %s", out)
 	}
 
 	// Verify config was saved.
@@ -94,10 +98,11 @@ func TestLogin_WithProfile(t *testing.T) {
 			})
 		case "/auth/device/token":
 			json.NewEncoder(w).Encode(sdk.DeviceTokenResponse{
-				Status:      "complete",
-				APIToken:    "mvd_staging_token",
-				AccountName: "staging-acct",
-				Email:       "bob@customer.com",
+				Status:        "complete",
+				APIToken:      "mvd_staging_token",
+				AccountName:   "staging-acct",
+				AccountNumber: "100000211",
+				Email:         "bob@customer.com",
 			})
 		}
 	})
