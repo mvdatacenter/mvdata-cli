@@ -24,8 +24,8 @@ func TestInstanceCreate(t *testing.T) {
 	if gotMethod != http.MethodPost {
 		t.Errorf("expected POST, got %s", gotMethod)
 	}
-	if gotPath != "/vpcs/production/instances" {
-		t.Errorf("expected /vpcs/production/instances, got %s", gotPath)
+	if gotPath != "/instances" {
+		t.Errorf("expected /instances, got %s", gotPath)
 	}
 	if !strings.Contains(out, "web-01") {
 		t.Errorf("expected output to contain 'web-01', got: %s", out)
@@ -53,13 +53,13 @@ func TestInstanceCreate_JSON(t *testing.T) {
 }
 
 func TestInstanceGet(t *testing.T) {
-	// GetInstance uses list endpoint and filters client-side.
 	var gotMethod, gotPath string
 	out, err := executeWithServer(
-		captureHandler(&gotMethod, &gotPath, jsonHandler(http.StatusOK, []sdk.Instance{
-			{Name: "web-01", InstanceType: "c1", AuthorizedKeyName: "deploy-key", PrivateIP: "10.0.0.2", Status: "running"},
+		captureHandler(&gotMethod, &gotPath, jsonHandler(http.StatusOK, sdk.Instance{
+			Name: "web-01", InstanceType: "c1", AuthorizedKeyName: "deploy-key",
+			PrivateIP: "10.0.0.2", Status: "running",
 		})),
-		"instance", "get", "--name", "web-01", "--vpc", "production",
+		"instance", "get", "--name", "web-01",
 	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -67,8 +67,8 @@ func TestInstanceGet(t *testing.T) {
 	if gotMethod != http.MethodGet {
 		t.Errorf("expected GET, got %s", gotMethod)
 	}
-	if gotPath != "/vpcs/production/instances" {
-		t.Errorf("expected /vpcs/production/instances, got %s", gotPath)
+	if gotPath != "/instances/web-01" {
+		t.Errorf("expected /instances/web-01, got %s", gotPath)
 	}
 	if !strings.Contains(out, "web-01") {
 		t.Errorf("expected output to contain 'web-01', got: %s", out)
@@ -79,7 +79,7 @@ func TestInstanceDelete(t *testing.T) {
 	var gotMethod, gotPath string
 	out, err := executeWithServer(
 		captureHandler(&gotMethod, &gotPath, noContentHandler()),
-		"instance", "delete", "--name", "web-01", "--vpc", "production",
+		"instance", "delete", "--name", "web-01",
 	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -87,8 +87,8 @@ func TestInstanceDelete(t *testing.T) {
 	if gotMethod != http.MethodDelete {
 		t.Errorf("expected DELETE, got %s", gotMethod)
 	}
-	if gotPath != "/vpcs/production/instances/web-01" {
-		t.Errorf("expected /vpcs/production/instances/web-01, got %s", gotPath)
+	if gotPath != "/instances/web-01" {
+		t.Errorf("expected /instances/web-01, got %s", gotPath)
 	}
 	if !strings.Contains(out, "deleted") {
 		t.Errorf("expected output to contain 'deleted', got: %s", out)

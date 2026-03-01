@@ -12,6 +12,7 @@ var (
 	flagAPIURL   string
 	flagAPIToken string
 	flagOutput   string
+	flagProfile  string
 )
 
 func newRootCmd() *cobra.Command {
@@ -26,6 +27,7 @@ func newRootCmd() *cobra.Command {
 	root.PersistentFlags().StringVarP(&flagOutput, "output", "o", "table", "Output format: table or json")
 	root.PersistentFlags().StringVar(&flagAPIURL, "api-url", "", "MV Data API URL")
 	root.PersistentFlags().StringVar(&flagAPIToken, "api-token", "", "MV Data API token")
+	root.PersistentFlags().StringVar(&flagProfile, "profile", "", "Config profile name")
 
 	root.AddCommand(newVersionCmd())
 	root.AddCommand(newVPCCmd())
@@ -34,13 +36,16 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newKeyCmd())
 	root.AddCommand(newKubernetesCmd())
 	root.AddCommand(newInstanceTypesCmd())
+	root.AddCommand(newLoginCmd())
+	root.AddCommand(newAPIKeyCmd())
+	root.AddCommand(newConfigureCmd())
 
 	return root
 }
 
 // newClient resolves config and returns an SDK client.
 func newClient() (*sdk.Client, error) {
-	cfg, err := config.Resolve(flagAPIURL, flagAPIToken)
+	cfg, err := config.Resolve(flagAPIURL, flagAPIToken, flagProfile)
 	if err != nil {
 		return nil, fmt.Errorf("resolving config: %w", err)
 	}

@@ -20,6 +20,7 @@ func TestMissingAuth(t *testing.T) {
 	// Clear env vars to avoid inheriting from the environment.
 	t.Setenv("MVDATA_API_URL", "")
 	t.Setenv("MVDATA_API_TOKEN", "")
+	t.Setenv("MVDATA_PROFILE", "")
 	t.Setenv("HOME", t.TempDir())
 
 	_, err := executeCommand("vpc", "get", "--name", "test")
@@ -34,6 +35,7 @@ func TestMissingAuth(t *testing.T) {
 func TestMissingToken(t *testing.T) {
 	t.Setenv("MVDATA_API_URL", "")
 	t.Setenv("MVDATA_API_TOKEN", "")
+	t.Setenv("MVDATA_PROFILE", "")
 	t.Setenv("HOME", t.TempDir())
 
 	_, err := executeCommand("vpc", "get", "--name", "test", "--api-url", "http://localhost")
@@ -50,7 +52,7 @@ func TestHelp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	for _, cmd := range []string{"vpc", "subnet", "instance", "key", "kubernetes", "instance-types", "version"} {
+	for _, cmd := range []string{"vpc", "subnet", "instance", "key", "kubernetes", "instance-types", "version", "login", "api-key", "configure"} {
 		if !strings.Contains(out, cmd) {
 			t.Errorf("expected help to contain %q", cmd)
 		}
