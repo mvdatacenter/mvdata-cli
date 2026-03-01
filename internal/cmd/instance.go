@@ -30,8 +30,9 @@ func newInstanceCreateCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			instance, err := client.CreateInstance(context.Background(), vpc, &sdk.Instance{
+			instance, err := client.CreateInstance(context.Background(), &sdk.Instance{
 				Name:              name,
+				VPCName:           vpc,
 				InstanceType:      instanceType,
 				AuthorizedKeyName: key,
 			})
@@ -53,7 +54,7 @@ func newInstanceCreateCmd() *cobra.Command {
 }
 
 func newInstanceGetCmd() *cobra.Command {
-	var name, vpc string
+	var name string
 	cmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get an instance",
@@ -62,7 +63,7 @@ func newInstanceGetCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			instance, err := client.GetInstance(context.Background(), vpc, name)
+			instance, err := client.GetInstance(context.Background(), name)
 			if err != nil {
 				return fmt.Errorf("getting instance: %w", err)
 			}
@@ -70,14 +71,12 @@ func newInstanceGetCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&name, "name", "", "Instance name (required)")
-	cmd.Flags().StringVar(&vpc, "vpc", "", "VPC name (required)")
 	cmd.MarkFlagRequired("name")
-	cmd.MarkFlagRequired("vpc")
 	return cmd
 }
 
 func newInstanceDeleteCmd() *cobra.Command {
-	var name, vpc string
+	var name string
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete an instance",
@@ -86,7 +85,7 @@ func newInstanceDeleteCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := client.DeleteInstance(context.Background(), vpc, name); err != nil {
+			if err := client.DeleteInstance(context.Background(), name); err != nil {
 				return fmt.Errorf("deleting instance: %w", err)
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "Instance %q deleted\n", name)
@@ -94,9 +93,7 @@ func newInstanceDeleteCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&name, "name", "", "Instance name (required)")
-	cmd.Flags().StringVar(&vpc, "vpc", "", "VPC name (required)")
 	cmd.MarkFlagRequired("name")
-	cmd.MarkFlagRequired("vpc")
 	return cmd
 }
 
