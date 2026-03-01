@@ -75,7 +75,7 @@ func newLoginCmd() *cobra.Command {
 					}
 
 					fmt.Fprintf(cmd.OutOrStdout(), " done\n\n")
-					fmt.Fprintf(cmd.OutOrStdout(), "Logged in as %s (account: %s)\n", resp.Email, resp.AccountName)
+					fmt.Fprintf(cmd.OutOrStdout(), "Logged in as %s (account: %s, #%s)\n", resp.Email, resp.AccountName, resp.AccountNumber)
 					fmt.Fprintf(cmd.OutOrStdout(), "API key saved to ~/.mvdata/config.json (profile: %s)\n", profileName)
 					return nil
 				default:
