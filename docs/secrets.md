@@ -12,9 +12,10 @@ under `-o json` it prints `{ storeName, name, version, value }`.
 
 ## Writing a value
 
-`secret put <store>/<name>` creates the secret, or replaces its value if it exists. The value never
-goes on the command line: `put` reads it from stdin, from a prompt that does not echo when stdin is
-a terminal, or from `--from-file <path>`. One trailing newline is dropped, because `echo` and most
+`secret put <store>/<name>` creates the secret, or replaces its value if it exists. Every argument
+and flag `put` takes names the secret or a file, and the value itself arrives by stdin, by a prompt
+that hides what is typed when stdin is a terminal, or from `--from-file <path>`, so it stays out of
+shell history and the process list. One trailing newline is dropped, because `echo` and most
 editors add one; `--keep-newline` keeps it.
 
 ```
