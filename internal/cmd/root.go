@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -22,7 +23,7 @@ func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:           "mvdata",
 		Short:         "CLI for managing MV Data cloud resources",
-		Long:          "mvdata is a command-line interface for managing VPCs, subnets, instances, SSH keys, and Kubernetes clusters on MV Data.",
+		Long:          "mvdata is a command-line interface for managing VPCs, subnets, instances, SSH keys, Kubernetes clusters, and secrets on MV Data.",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
@@ -42,6 +43,8 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newLoginCmd())
 	root.AddCommand(newAPIKeyCmd())
 	root.AddCommand(newConfigureCmd())
+	root.AddCommand(newSecretStoreCmd())
+	root.AddCommand(newSecretCmd())
 
 	return root
 }
@@ -61,10 +64,39 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	root.SetOut(stdout)
 	root.SetErr(stderr)
 	if err := root.Execute(); err != nil {
-		fmt.Fprintf(stderr, "Error: %s\n", strings.TrimSpace(err.Error()))
-		return 1
+		fmt.Fprintf(stderr, "Error: %s\n", strings.TrimSpace(errorMessage(err)))
+		return exitStatus(err)
 	}
 	return 0
+}
+
+var exitStatuses = []struct {
+	sentinel error
+	status   int
+}{
+	{sdk.ErrNotFound, 3},
+	{sdk.ErrForbidden, 4},
+	{sdk.ErrLimitExceeded, 5},
+	{sdk.ErrConflict, 6},
+	{sdk.ErrInvalid, 7},
+	{sdk.ErrUnavailable, 8},
+}
+
+func exitStatus(err error) int {
+	for _, s := range exitStatuses {
+		if errors.Is(err, s.sentinel) {
+			return s.status
+		}
+	}
+	return 1
+}
+
+func errorMessage(err error) string {
+	var limit *sdk.LimitExceededError
+	if errors.As(err, &limit) {
+		return fmt.Sprintf("%s (%s)", err.Error(), limit.Error())
+	}
+	return err.Error()
 }
 
 func Execute() int {
