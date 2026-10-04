@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"strings"
 
 	"github.com/mvdatacenter/mvdata-cli/internal/config"
 	sdk "github.com/mvdatacenter/mvdata-sdk-go/mvdata"
@@ -17,9 +20,9 @@ var (
 
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:   "mvdata",
-		Short: "CLI for managing MV Data cloud resources",
-		Long:  "mvdata is a command-line interface for managing VPCs, subnets, instances, SSH keys, and Kubernetes clusters on MV Data.",
+		Use:           "mvdata",
+		Short:         "CLI for managing MV Data cloud resources",
+		Long:          "mvdata is a command-line interface for managing VPCs, subnets, instances, SSH keys, and Kubernetes clusters on MV Data.",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
@@ -52,7 +55,18 @@ func newClient() (*sdk.Client, error) {
 	return sdk.New(cfg.APIURL, cfg.APIToken), nil
 }
 
-// Execute runs the root command.
-func Execute() error {
-	return newRootCmd().Execute()
+func Run(args []string, stdout, stderr io.Writer) int {
+	root := newRootCmd()
+	root.SetArgs(args)
+	root.SetOut(stdout)
+	root.SetErr(stderr)
+	if err := root.Execute(); err != nil {
+		fmt.Fprintf(stderr, "Error: %s\n", strings.TrimSpace(err.Error()))
+		return 1
+	}
+	return 0
+}
+
+func Execute() int {
+	return Run(os.Args[1:], os.Stdout, os.Stderr)
 }
