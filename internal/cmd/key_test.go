@@ -49,7 +49,7 @@ func TestKeyCreate_JSON(t *testing.T) {
 func TestKeyGet(t *testing.T) {
 	var gotMethod, gotPath string
 	out, err := executeWithServer(
-		captureHandler(&gotMethod, &gotPath, jsonHandler(http.StatusOK, sdk.Key{Name: "deploy-key", Key: "ssh-ed25519 AAAA..."})),
+		captureHandler(&gotMethod, &gotPath, jsonHandler(http.StatusOK, []sdk.Key{{Name: "deploy-key", Key: "ssh-ed25519 AAAA..."}})),
 		"key", "get", "--name", "deploy-key",
 	)
 	if err != nil {

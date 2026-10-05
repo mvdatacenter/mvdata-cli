@@ -16,6 +16,8 @@ This CLI provides 1:1 coverage of every resource in the MV Data console API. It 
 | SSH Key | `mvdata key` | create, get, delete |
 | Kubernetes Cluster | `mvdata kubernetes` | create, get, update, delete |
 | Instance Type | `mvdata instance-types` | list |
+| Secret Store | `mvdata secret-store` | list, create, get, update, delete |
+| Secret | `mvdata secret` | list, get, reveal, put, delete |
 
 ## Installation
 
@@ -70,8 +72,21 @@ mvdata kubernetes delete  --name <name>
 
 mvdata instance-types list
 
+mvdata secret-store list
+mvdata secret-store create <store> [--description <text>]
+mvdata secret-store get    <store>
+mvdata secret-store update <store> --description <text>
+mvdata secret-store delete <store>
+
+mvdata secret list   --store <store>
+mvdata secret get    <store>/<name> [--reveal]
+mvdata secret put    <store>/<name> [--from-file <path>] [--keep-newline]
+mvdata secret delete <store>/<name>
+
 mvdata version
 ```
+
+[docs/secrets.md](docs/secrets.md) covers how `--reveal` and `put` handle a value, and each exit status.
 
 ### Global flags
 

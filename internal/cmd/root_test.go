@@ -72,7 +72,7 @@ func TestOutputFlag(t *testing.T) {
 	}
 }
 
-func TestRunPrintsErrorToStderrAndExitsOne(t *testing.T) {
+func TestRunPrintsErrorToStderrWithItsStatus(t *testing.T) {
 	t.Setenv("MVDATA_API_URL", "")
 	t.Setenv("MVDATA_API_TOKEN", "")
 	t.Setenv("MVDATA_PROFILE", "")
@@ -90,18 +90,19 @@ func TestRunPrintsErrorToStderrAndExitsOne(t *testing.T) {
 		name    string
 		args    []string
 		message string
+		status  int
 	}{
-		{"no config", []string{"vpc", "get", "--name", "test"}, "API URL is required"},
-		{"refused connection", []string{"vpc", "get", "--name", "test", "--api-url", closedURL, "--api-token", "x"}, "connection refused"},
-		{"refused connection json", []string{"vpc", "get", "--name", "test", "--api-url", closedURL, "--api-token", "x", "-o", "json"}, "connection refused"},
-		{"server error", []string{"vpc", "get", "--name", "test", "--api-url", failing.URL, "--api-token", "x"}, "500"},
+		{"no config", []string{"vpc", "get", "--name", "test"}, "API URL is required", 1},
+		{"refused connection", []string{"vpc", "get", "--name", "test", "--api-url", closedURL, "--api-token", "x"}, "connection refused", 8},
+		{"refused connection json", []string{"vpc", "get", "--name", "test", "--api-url", closedURL, "--api-token", "x", "-o", "json"}, "connection refused", 8},
+		{"server error", []string{"vpc", "get", "--name", "test", "--api-url", failing.URL, "--api-token", "x"}, "500", 1},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			var stdout, stderr bytes.Buffer
 			code := Run(tc.args, &stdout, &stderr)
-			if code != 1 {
-				t.Errorf("exit status = %d, want 1", code)
+			if code != tc.status {
+				t.Errorf("exit status = %d, want %d", code, tc.status)
 			}
 			got := stderr.String()
 			if !strings.HasPrefix(got, "Error: ") || !strings.HasSuffix(got, "\n") || strings.Count(got, "\n") != 1 {
