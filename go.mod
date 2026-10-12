@@ -3,7 +3,7 @@ module github.com/mvdatacenter/mvdata-cli
 go 1.25.7
 
 require (
-	github.com/mvdatacenter/mvdata-sdk-go v0.5.1-0.20261004203201-9f1ef3b8eab3
+	github.com/mvdatacenter/mvdata-sdk-go v0.6.0
 	github.com/spf13/cobra v1.9.1
 	golang.org/x/term v0.45.0
 )
