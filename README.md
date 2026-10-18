@@ -105,6 +105,10 @@ make build
 make test
 ```
 
+`make integration` runs the built CLI, with Docker, against a console-api built from the commit in
+`test/integration/console-api.ref`, with OpenBao and that console's reconciler and tenant
+administrator beside it (`test/integration/docker-compose.yml`).
+
 For local development against an unreleased SDK, add a replace directive:
 
 ```

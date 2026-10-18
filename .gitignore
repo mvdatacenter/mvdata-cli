@@ -1,2 +1,4 @@
 mvdata
 dist/
+# make integration clones the console it runs against here (test/integration/console-api.ref).
+/test/integration/console-api/
