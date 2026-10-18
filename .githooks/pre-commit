@@ -3,6 +3,9 @@
 
 SCRIPT=".ai-shared/pre-commit.sh"
 RAW="https://raw.githubusercontent.com/mvdatacenter/ai-instructions/main/hooks/pre-commit.sh"
+# The API second source: docs/runtime-and-delivery-reference.md, "Guard
+# reference" (#6543).
+API="https://api.github.com/repos/mvdatacenter/ai-instructions/contents/hooks/pre-commit.sh?ref=main"
 
 # What this wrapper hands control to has to be the central script, and the path
 # being occupied does not say that. `.ai-shared/` is untracked, locally ignored,
@@ -47,6 +50,23 @@ cache_is_what_provisioning_recorded && CACHE_OK=1
 
 if [ "$CACHE_OK" -eq 0 ]; then
     mkdir -p .ai-shared
+    # In the central source repository, seed .ai-shared/pre-commit.sh from the
+    # reviewed origin/main before bash opens the script, so the script does not
+    # replace itself mid-run when branch and main copies differ (#6543). The
+    # working-tree copy is never the fallback: that would serve this branch's
+    # unreviewed code (#1285); an unresolvable origin/main fetches main below.
+    if [ -f "hooks/pre-commit.sh" ] && [ -f "org.md" ]; then
+        PARTIAL="$SCRIPT.seeding.$$"
+        if git rev-parse --verify --quiet refs/remotes/origin/main >/dev/null 2>&1 \
+            && git show "origin/main:hooks/pre-commit.sh" > "$PARTIAL" 2>/dev/null; then
+            mv -f "$PARTIAL" "$SCRIPT"
+            CACHE_OK=1
+        fi
+        rm -f "$PARTIAL"
+    fi
+fi
+
+if [ "$CACHE_OK" -eq 0 ]; then
     TOKEN="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
     if [ -z "$TOKEN" ]; then
         if command -v gh >/dev/null 2>&1; then
@@ -87,6 +107,15 @@ if [ "$CACHE_OK" -eq 0 ]; then
             --connect-timeout 15 --speed-limit 10240 --speed-time 15 -C - --config - \
             "$RAW" -o "$PARTIAL" < /dev/null || FETCH_STATUS=$?
     fi
+    RAW_STATUS=$FETCH_STATUS
+    if [ "$FETCH_STATUS" -ne 0 ] && [ -n "$TOKEN" ]; then
+        rm -f "$PARTIAL"
+        FETCH_STATUS=0
+        printf 'header = "Authorization: token %s"\nheader = "Accept: application/vnd.github.raw"\n' "$TOKEN" |
+        curl --http1.1 -sf --retry 3 --retry-delay 1 --retry-connrefused \
+            --connect-timeout 15 --speed-limit 10240 --speed-time 15 --config - \
+            "$API" -o "$PARTIAL" || FETCH_STATUS=$?
+    fi
     if [ "$FETCH_STATUS" -eq 0 ]; then
         mv -f "$PARTIAL" "$SCRIPT"
         # What just arrived is reviewed main, not a recorded file: the record is
@@ -100,15 +129,63 @@ if [ "$CACHE_OK" -eq 0 ]; then
     fi
 fi
 
+# Neither GitHub source answered. An ai-instructions clone beside this
+# repository holds the same file at its origin/main, which is how a cloud
+# environment's setup script, with fresh clones and no credential, gets one
+# (#6543). The script decides whether that clone is fresh enough to read the
+# rest from, and refuses the pass if it is not, so this seeds it from origin/main
+# whatever that ref's age. Which clones it reads, in order, is in
+# docs/runtime-and-delivery-reference.md under #6543.
+if [ "$CACHE_OK" -eq 0 ]; then
+    HERE=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+    if [ -n "${CLAUDE_INSTRUCTIONS_DIR:-}" ]; then
+        SIBLINGS="$CLAUDE_INSTRUCTIONS_DIR"
+    else
+        SIBLINGS="$(dirname "$HERE")/ai-instructions"
+        RC_FOR_ROOTS=$(command -v rc 2>/dev/null || true)
+        [ -n "$RC_FOR_ROOTS" ] || RC_FOR_ROOTS="$HOME/.local/bin/rc"
+        if [ -f "$RC_FOR_ROOTS" ] && grep -q -- __print-projects-roots "$RC_FOR_ROOTS" 2>/dev/null; then
+            ROOTS=$(env -u GIT_DIR -u GIT_INDEX_FILE -u GIT_WORK_TREE bash "$RC_FOR_ROOTS" __print-projects-roots 2>/dev/null | sed -e '/^$/d' -e 's#/*$#/ai-instructions#')
+            [ -z "$ROOTS" ] || SIBLINGS="$SIBLINGS
+$ROOTS"
+        fi
+    fi
+    while IFS= read -r SIBLING; do
+        [ -n "$SIBLING" ] && [ -e "$SIBLING/.git" ] || continue
+        THERE=$(env -u GIT_DIR -u GIT_INDEX_FILE -u GIT_WORK_TREE git -C "$SIBLING" rev-parse --show-toplevel 2>/dev/null)
+        [ -n "$THERE" ] && [ "$THERE" != "$HERE" ] || continue
+        case "$(env -u GIT_DIR -u GIT_INDEX_FILE -u GIT_WORK_TREE git -C "$SIBLING" remote get-url origin 2>/dev/null)" in
+            *[/:]mvdatacenter/ai-instructions|*[/:]mvdatacenter/ai-instructions.git) ;;
+            *) continue ;;
+        esac
+        PARTIAL="$SCRIPT.seeding.$$"
+        if env -u GIT_DIR -u GIT_INDEX_FILE -u GIT_WORK_TREE git -C "$SIBLING" show "refs/remotes/origin/main:hooks/pre-commit.sh" > "$PARTIAL" 2>/dev/null; then
+            mv -f "$PARTIAL" "$SCRIPT"
+            CACHE_OK=1
+            break
+        fi
+        rm -f "$PARTIAL"
+    done <<SIBLINGS_EOF
+$SIBLINGS
+SIBLINGS_EOF
+fi
+
 if [ "$CACHE_OK" -eq 0 ]; then
     if [ ! -f "$SCRIPT" ]; then
         echo "pre-commit: $SCRIPT is missing and could not be fetched from" >&2
-        echo "$RAW after 4 attempts (curl exit ${FETCH_STATUS:-unknown})," >&2
+        echo "$RAW" >&2
+        if [ -n "$TOKEN" ]; then
+            echo "(curl exit ${RAW_STATUS:-unknown}) or $API" >&2
+        fi
+        echo "after 4 attempts each (curl exit ${FETCH_STATUS:-unknown})," >&2
         echo "so the central pre-commit logic never ran." >&2
     else
         echo "pre-commit: $SCRIPT is not the content the last verified fetch" >&2
         echo "recorded in .ai-shared/.sha-hooks-pre-commit.sh, and $RAW" >&2
-        echo "could not be fetched to replace it after 4 attempts (curl exit" >&2
+        if [ -n "$TOKEN" ]; then
+            echo "(curl exit ${RAW_STATUS:-unknown}) or $API" >&2
+        fi
+        echo "could not be fetched to replace it after 4 attempts each (curl exit" >&2
         echo "${FETCH_STATUS:-unknown}), so what is cached is a file of unknown" >&2
         echo "origin rather than the central pre-commit logic." >&2
     fi

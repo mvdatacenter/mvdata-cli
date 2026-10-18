@@ -3,9 +3,11 @@
 
 SCRIPT=".ai-shared/post-checkout.sh"
 RAW="https://raw.githubusercontent.com/mvdatacenter/ai-instructions/main/hooks/post-checkout.sh"
+API="https://api.github.com/repos/mvdatacenter/ai-instructions/contents/hooks/post-checkout.sh?ref=main"
 
 PRECOMMIT_SCRIPT=".ai-shared/pre-commit.sh"
 PRECOMMIT_RAW="https://raw.githubusercontent.com/mvdatacenter/ai-instructions/main/hooks/pre-commit.sh"
+PRECOMMIT_API="https://api.github.com/repos/mvdatacenter/ai-instructions/contents/hooks/pre-commit.sh?ref=main"
 
 # A cached script is run only while it is still the content a provisioning pass
 # recorded beside it, not because the path is occupied. `.ai-shared/` is
@@ -47,12 +49,36 @@ cache_is_what_provisioning_recorded() {
 # failure (#5095). Bound stalls and connection delays, and resume partial
 # transfers (#5178).
 #
+# The API address is the second source: docs/runtime-and-delivery-reference.md,
+# "Guard reference" (#6543).
+#
 # Returns non-zero when the cache is still not something this run can account
 # for, so the caller reports rather than running a file of unknown origin.
 ensure_cached() {
-    local dest="$1" url="$2" token="" partial status fallback_dir
+    local dest="$1" url="$2" api="$3" token="" partial status fallback_dir
     cache_is_what_provisioning_recorded "$dest" && return 0
     mkdir -p .ai-shared
+    # In the central source repository, seed .ai-shared/ files from the reviewed
+    # origin/main before bash opens them, so a script does not replace itself
+    # mid-run when branch and main copies differ (#6543). The working-tree copy
+    # is never the fallback (#1285); an unresolvable origin/main fetches below.
+    if [ -f "hooks/pre-commit.sh" ] && [ -f "org.md" ]; then
+        local src_file=""
+        case "$dest" in
+            */pre-commit.sh) src_file="hooks/pre-commit.sh" ;;
+            */post-checkout.sh) src_file="hooks/post-checkout.sh" ;;
+        esac
+        if [ -n "$src_file" ]; then
+            partial="$dest.seeding.$$"
+            if git rev-parse --verify --quiet refs/remotes/origin/main >/dev/null 2>&1 \
+                && git show "origin/main:$src_file" > "$partial" 2>/dev/null; then
+                mv -f "$partial" "$dest"
+                rm -f "$partial"
+                return 0
+            fi
+            rm -f "$partial"
+        fi
+    fi
     token="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
     if [ -z "$token" ]; then
         if command -v gh >/dev/null 2>&1; then
@@ -93,6 +119,17 @@ ensure_cached() {
             --connect-timeout 15 --speed-limit 10240 --speed-time 15 -C - --config - \
             -w '%{http_code}' "$url" -o "$partial" < /dev/null) || status=$?
     fi
+    RAW_FETCH_STATUS=$status
+    FETCH_TRIED_API=""
+    if [ "$status" -ne 0 ] && [ -n "$token" ]; then
+        FETCH_TRIED_API="$api"
+        rm -f "$partial"
+        status=0
+        FETCH_HTTP_CODE=$(printf 'header = "Authorization: token %s"\nheader = "Accept: application/vnd.github.raw"\n' "$token" |
+        curl --http1.1 -sf --retry 3 --retry-delay 1 --retry-connrefused \
+            --connect-timeout 15 --speed-limit 10240 --speed-time 15 --config - \
+            -w '%{http_code}' "$api" -o "$partial") || status=$?
+    fi
     FETCH_STATUS=$status
     if [ "$status" -eq 0 ]; then
         # What just arrived is reviewed main, not a recorded file: the record is
@@ -105,6 +142,12 @@ ensure_cached() {
     fi
     rm -f "$partial"
     return 1
+}
+
+report_api_source() {
+    [ -n "${FETCH_TRIED_API:-}" ] || return 0
+    echo "The raw fetch failed (curl exit ${RAW_FETCH_STATUS:-unknown}), and so did" >&2
+    echo "$FETCH_TRIED_API (curl exit ${FETCH_STATUS:-unknown}, HTTP ${FETCH_HTTP_CODE:-000})." >&2
 }
 
 # Each of the three reports below ends the same way, telling the reader to rerun
@@ -137,7 +180,7 @@ report_missing_credential() {
 }
 
 PRECOMMIT_OK=0
-ensure_cached "$PRECOMMIT_SCRIPT" "$PRECOMMIT_RAW" && PRECOMMIT_OK=1
+ensure_cached "$PRECOMMIT_SCRIPT" "$PRECOMMIT_RAW" "$PRECOMMIT_API" && PRECOMMIT_OK=1
 
 # Warming the pre-commit cache is best-effort — a checkout with nothing cached
 # still runs the central post-checkout, which reports and reminds. A cache that
@@ -151,17 +194,19 @@ if [ "$PRECOMMIT_OK" -eq 0 ] && [ -f "$PRECOMMIT_SCRIPT" ]; then
     echo "be fetched from $PRECOMMIT_RAW to replace it," >&2
     echo "so this checkout was left unprovisioned rather than provisioned by a" >&2
     echo "cached file of unknown origin." >&2
+    report_api_source
     report_missing_credential
     echo "Run 'bash .githooks/pre-commit' once network or 'gh auth' is" >&2
     echo "available. Session launches refuse an unprovisioned checkout" >&2
     echo "(PM-0064), and commit and push run the same provisioning." >&2
-elif ensure_cached "$SCRIPT" "$RAW"; then
+elif ensure_cached "$SCRIPT" "$RAW" "$API"; then
     bash "$SCRIPT" "$@"
 elif [ -f "$SCRIPT" ]; then
     echo "post-checkout: $SCRIPT is not the content the last verified fetch" >&2
     echo "recorded in .ai-shared/.sha-hooks-post-checkout.sh, and $RAW" >&2
     echo "could not be fetched to replace it, so this checkout is unprovisioned" >&2
     echo "and the cached file was not run." >&2
+    report_api_source
     report_missing_credential
     echo "Run 'bash .githooks/pre-commit' once network or 'gh auth' is" >&2
     echo "available. Session launches refuse an unprovisioned checkout" >&2
@@ -169,6 +214,7 @@ elif [ -f "$SCRIPT" ]; then
 else
     echo "post-checkout: $SCRIPT is missing and could not be fetched from" >&2
     echo "$RAW, so this checkout is unprovisioned." >&2
+    report_api_source
     report_missing_credential
     echo "Run 'bash .githooks/pre-commit' once network or 'gh auth' is" >&2
     echo "available. Session launches refuse an unprovisioned checkout" >&2
