@@ -144,6 +144,12 @@ ensure_cached() {
     return 1
 }
 
+report_api_source() {
+    [ -n "${FETCH_TRIED_API:-}" ] || return 0
+    echo "The raw fetch failed (curl exit ${RAW_FETCH_STATUS:-unknown}), and so did" >&2
+    echo "$FETCH_TRIED_API (curl exit ${FETCH_STATUS:-unknown}, HTTP ${FETCH_HTTP_CODE:-000})." >&2
+}
+
 # Each of the three reports below ends the same way, telling the reader to rerun
 # provisioning "once network or 'gh auth' is available" -- two causes, and
 # nothing in the failure says which. This says which, when the fetch never had a
@@ -156,12 +162,6 @@ ensure_cached() {
 # reads the answer off curl's `-w '%{http_code}'`, which is 000 when no HTTP
 # answer came back (the body goes to the side path, so stdout carries only that
 # code).
-report_api_source() {
-    [ -n "${FETCH_TRIED_API:-}" ] || return 0
-    echo "The raw fetch failed (curl exit ${RAW_FETCH_STATUS:-unknown}), and so did" >&2
-    echo "$FETCH_TRIED_API (curl exit ${FETCH_STATUS:-unknown}, HTTP ${FETCH_HTTP_CODE:-000})." >&2
-}
-
 report_missing_credential() {
     [ "${AUTH_CREDENTIAL_MISSING:-0}" -eq 1 ] || return 0
     echo "No GitHub credential was available: neither GH_TOKEN nor GITHUB_TOKEN" >&2
