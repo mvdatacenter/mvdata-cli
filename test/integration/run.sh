@@ -28,7 +28,6 @@ export PYX_RECONCILER_TOKEN PYX_TENANT_ADMIN_TOKEN
 work="$(mktemp -d)"
 cleanup() {
   local project="mvdata-cli-integration-$$" out
-  rm -rf "$work" || echo "could not remove $work" >&2
   if ! out="$("${compose[@]}" down --volumes --remove-orphans 2>&1)"; then
     echo "teardown of compose project $project failed: $out" >&2
     echo "remove what is left with: docker compose -p $project down --volumes" >&2
@@ -39,6 +38,7 @@ cleanup() {
     echo "containers of compose project $project survived teardown;" \
       "remove them with: docker compose -p $project down --volumes" >&2
   fi
+  rm -rf "$work" || echo "could not remove $work" >&2
 }
 trap cleanup EXIT
 
