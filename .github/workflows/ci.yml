@@ -16,3 +16,25 @@ jobs:
           go-version-file: .go-version
       - run: go vet ./...
       - run: go test ./...
+
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: .go-version
+      - name: Read the pinned console commit
+        id: console
+        run: echo "ref=$(tr -d "[:space:]" < test/integration/console-api.ref)" >> "$GITHUB_OUTPUT"
+      # console-api is private; CONSOLE_API_READ_TOKEN can read that repository and nothing else.
+      # test/integration/run.sh finds the checkout at the pinned commit and builds it as is.
+      - uses: actions/checkout@v4
+        with:
+          repository: mvdatacenter/console-api
+          ref: ${{ steps.console.outputs.ref }}
+          token: ${{ secrets.CONSOLE_API_READ_TOKEN }}
+          path: test/integration/console-api
+          persist-credentials: false
+      - run: make integration
