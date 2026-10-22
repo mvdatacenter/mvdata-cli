@@ -33,7 +33,7 @@ jobs:
         id: console-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.CONSOLE_API_APP_ID }}
+          client-id: ${{ secrets.CONSOLE_API_APP_ID }}
           private-key: ${{ secrets.CONSOLE_API_APP_PRIVATE_KEY }}
           owner: mvdatacenter
           repositories: console-api
