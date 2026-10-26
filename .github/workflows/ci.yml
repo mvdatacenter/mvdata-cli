@@ -10,7 +10,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
           go-version-file: .go-version
@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
           go-version-file: .go-version
@@ -40,7 +40,7 @@ jobs:
           owner: mvdatacenter
           repositories: console-api
       # test/integration/run.sh finds the checkout at the pinned commit and builds it as is.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: mvdatacenter/console-api
           ref: ${{ steps.console.outputs.ref }}
