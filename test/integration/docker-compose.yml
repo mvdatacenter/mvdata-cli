@@ -31,7 +31,7 @@ services:
       retries: 15
 
   openbao:
-    image: quay.io/openbao/openbao:2.4.1
+    image: quay.io/openbao/openbao:2.7.1
     command: server -dev -dev-root-token-id=test-root-token -dev-listen-address=0.0.0.0:8200
     environment:
       BAO_ADDR: http://127.0.0.1:8200
