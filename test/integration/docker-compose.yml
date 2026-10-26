@@ -42,7 +42,7 @@ services:
       retries: 15
 
   audit_bucket:
-    image: versity/versitygw:v1.0.17
+    image: versity/versitygw:v1.9.0
     command: --access acceptance-audit-key --secret acceptance-audit-secret --region auto posix /tmp
 
   console:
