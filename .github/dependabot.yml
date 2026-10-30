@@ -11,10 +11,10 @@ updates:
     schedule:
       interval: "weekly"
     cooldown:
-      default-days: 7
+      default-days: 30
   - package-ecosystem: "docker-compose"
     directory: "/test/integration"
     schedule:
       interval: "weekly"
     cooldown:
-      default-days: 7
+      default-days: 30
