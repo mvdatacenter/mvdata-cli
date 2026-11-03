@@ -31,7 +31,9 @@ services:
       retries: 15
 
   openbao:
-    image: quay.io/openbao/openbao:2.7.2
+    # console-api's test/openbao/pin.json at console-api.ref names this version, and its harness
+    # refuses any other, so this image moves with that ref and .github/dependabot.yml leaves it alone.
+    image: quay.io/openbao/openbao:2.4.1
     command: server -dev -dev-root-token-id=test-root-token -dev-listen-address=0.0.0.0:8200
     environment:
       BAO_ADDR: http://127.0.0.1:8200
